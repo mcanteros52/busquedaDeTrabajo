@@ -1,4 +1,3 @@
-// src/utils/api.js
 import axios from 'axios';
 import { fetchAuthSession } from 'aws-amplify/auth';
 
@@ -6,16 +5,16 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 310000, // 310s para el agente que puede tardar hasta 5min
+  timeout: 310000,
 });
 
 // Interceptor: inyectar token JWT en cada request
 api.interceptors.request.use(async (config) => {
   try {
     const session = await fetchAuthSession();
-    const token = session.tokens?.accessToken?.toString();
+    const token = session.tokens?.idToken?.toString();
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = token;
     }
   } catch (err) {
     console.warn('Could not get auth token:', err.message);
@@ -27,10 +26,7 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expirado — Amplify lo maneja con refresh automático
-      window.location.href = '/login';
-    }
+    // No redirigir en 401 — dejar que el componente maneje el error
     return Promise.reject(error.response?.data || error);
   }
 );
