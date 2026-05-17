@@ -1,0 +1,22 @@
+{
+  "name": "jobmatch-agent",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "infrastructure",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "bootstrap": "cd infrastructure && npx cdk bootstrap",
+    "deploy:dev": "cd infrastructure && npx cdk deploy --all --context env=dev",
+    "deploy:prod": "cd infrastructure && npx cdk deploy --all --context env=prod --require-approval never",
+    "diff": "cd infrastructure && npx cdk diff --all",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5"
+  }
+}
