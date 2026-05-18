@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Loader, AlertCircle } from 'lucide-react';
-import { matchAPI, jobsAPI } from '../utils/api';
+import { matchAPI, profileAPI } from '../utils/api';
 
 const PORTALS = [
   { id: 'getonboard', label: 'GetOnBoard', region: 'LATAM' },
@@ -14,7 +14,6 @@ export default function SearchPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // cvId puede venir del estado de navegación (desde CVUpload) o del historial
   const [cvId, setCvId] = useState(location.state?.cvId || '');
   const [config, setConfig] = useState({
     portals: ['getonboard', 'computrabajo'],
@@ -34,6 +33,16 @@ export default function SearchPage() {
     'Calculando scores de coincidencia...',
     'Rankeando resultados...',
   ];
+
+  // Si no hay cvId en el estado, intentar obtenerlo del perfil
+  useEffect(() => {
+    if (!cvId) {
+      profileAPI.getMe().then(res => {
+        const id = res?.data?.lastCvId || res?.lastCvId;
+        if (id) setCvId(id);
+      }).catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     let stepIdx = 0;
@@ -59,7 +68,7 @@ export default function SearchPage() {
 
   async function handleSearch() {
     if (!cvId.trim()) {
-      setError('Primero subí tu CV para poder buscar');
+      setError('Primero subí tu CV para poder buscar. El ID aparece luego de subir el archivo.');
       return;
     }
     if (config.portals.length === 0) {
@@ -72,10 +81,15 @@ export default function SearchPage() {
 
     try {
       const response = await matchAPI.run(cvId, config);
-      const { matchId } = response.data;
-      navigate(`/results/${matchId}`);
+      // El interceptor de Axios ya desenvuelve response.data
+      const matchId = response?.matchId || response?.data?.matchId;
+      if (matchId) {
+        navigate(`/results/${matchId}`);
+      } else {
+        navigate('/results');
+      }
     } catch (err) {
-      setError(err?.error || 'Error al ejecutar la búsqueda. Intentá de nuevo.');
+      setError(err?.error || err?.message || 'Error al ejecutar la búsqueda. Intentá de nuevo.');
       setLoading(false);
     }
   }

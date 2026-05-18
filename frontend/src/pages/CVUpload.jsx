@@ -47,8 +47,12 @@ export default function CVUpload() {
 
     try {
       // 1. Pedir presigned URL al backend
+      // El interceptor de Axios ya desenvuelve response.data → accedemos directo
       const response = await cvAPI.requestUploadUrl(file.name, file.size);
-      const { uploadUrl, cvId: newCvId } = response.data;
+      const uploadUrl = response?.uploadUrl || response?.data?.uploadUrl;
+      const newCvId = response?.cvId || response?.data?.cvId;
+
+      if (!uploadUrl) throw new Error('No se recibió URL de subida');
       setCvId(newCvId);
 
       // 2. Subir directamente a S3 con la presigned URL
@@ -64,7 +68,7 @@ export default function CVUpload() {
       setProgress(100);
     } catch (err) {
       setStatus('error');
-      setError(err?.error || 'Error al subir el archivo. Intentá de nuevo.');
+      setError(err?.error || err?.message || 'Error al subir el archivo. Intentá de nuevo.');
     }
   }
 
@@ -89,44 +93,39 @@ export default function CVUpload() {
           {...getRootProps()}
           className="card"
           style={{
-            cursor: 'pointer',
-            border: isDragActive
-              ? '2px dashed var(--color-accent)'
-              : file
-              ? '2px dashed var(--color-success)'
-              : '2px dashed var(--color-border)',
-            background: isDragActive ? 'var(--color-accent-glow)' : 'var(--color-surface)',
+            border: `2px dashed ${isDragActive ? 'var(--color-accent)' : 'var(--color-border)'}`,
+            background: isDragActive ? 'rgba(59, 130, 246, 0.05)' : 'var(--color-surface)',
+            padding: '40px 32px',
             textAlign: 'center',
-            padding: '60px 40px',
+            cursor: 'pointer',
             transition: 'all 0.2s ease',
           }}
         >
           <input {...getInputProps()} />
-
           {file ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-              <File size={28} color="var(--color-success)" />
+              <File size={28} color="var(--color-accent)" />
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 600 }}>{file.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                  {(file.size / 1024).toFixed(0)} KB
+                <div style={{ fontWeight: 600, fontSize: 15 }}>{file.name}</div>
+                <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+                  {Math.round(file.size / 1024)} KB
                 </div>
               </div>
               <button
-                onClick={(e) => { e.stopPropagation(); handleReset(); }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', marginLeft: 8 }}
+                onClick={e => { e.stopPropagation(); handleReset(); }}
+                style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
           ) : (
             <>
-              <Upload size={40} color="var(--color-text-muted)" style={{ marginBottom: 16 }} />
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                {isDragActive ? 'Soltá el archivo aquí' : 'Arrastrá tu CV o hacé click para seleccionar'}
+              <Upload size={32} color="var(--color-text-muted)" style={{ marginBottom: 12 }} />
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                {isDragActive ? 'Soltá el archivo acá' : 'Arrastrá tu CV o hacé click para seleccionar'}
               </div>
               <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-                Solo PDF • Máximo 5MB
+                PDF, máx 5MB
               </div>
             </>
           )}
@@ -141,7 +140,7 @@ export default function CVUpload() {
           border: '1px solid rgba(239, 68, 68, 0.3)',
           borderRadius: 'var(--radius-md)',
           padding: '10px 14px',
-          marginTop: 12,
+          marginTop: 16,
           color: 'var(--color-error)',
           fontSize: 13,
         }}>
